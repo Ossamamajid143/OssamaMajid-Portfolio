@@ -13,9 +13,148 @@
     color: #1c1b1a;
     font-family: var(--font-sans);
   }
+
 }
 
-/* Lenis smooth scrolling helper styles */
+/* ── Hero: editorial portfolio layout ───────────────────────────── */
+#hero-section {
+  background: #e9e8e3 !important;
+  color: #151515 !important;
+}
+
+#hero-section .hero-reference,
+#hero-section .hero-name,
+#hero-section .hero-nav-copy,
+#hero-section .hero-intro,
+#hero-section .hero-contact,
+#hero-section .hero-date {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+#hero-section .hero-name {
+  font-weight: 700;
+  font-stretch: condensed;
+  text-rendering: geometricPrecision;
+}
+
+#hero-section .hero-left {
+  align-self: stretch;
+  justify-content: flex-start;
+  padding: 1.2vw 0 2.1vw;
+}
+
+#hero-section .hero-photo-col {
+  align-self: end;
+}
+
+#hero-section .hero-date-col {
+  align-self: end;
+  padding-bottom: 1.1vw;
+}
+
+#hero-section .hero-date {
+  font-weight: 700;
+}
+
+/* The document canvas stays light; dark sections are independent cards that
+   layer over one another as their inner panels animate out. */
+#services-section-dark,
+#works-intro-sticky,
+#project-bi-dashboard,
+#project-eco-ecommerce,
+#project-gta6-parody,
+#project-xnerds-portal,
+#project-vitaloom,
+#skills-section-dark,
+#about-section-dark,
+#contact-section-dark {
+  background: transparent !important;
+}
+
+#works-section {
+  background: #e9e8e3 !important;
+}
+
+#services-section-dark-inner,
+#works-section-inner,
+#works-intro-sticky-inner,
+#project-bi-dashboard-inner,
+#project-eco-ecommerce-inner,
+#project-gta6-parody-inner,
+#project-xnerds-portal-inner,
+#project-vitaloom-inner,
+#skills-section-dark-inner,
+#about-section-dark-inner,
+#contact-section-dark-inner {
+  width: calc(100% - clamp(2rem, 5.5vw, 7rem)) !important;
+  margin-inline: auto;
+  background: #050505;
+  border-radius: 1.5rem;
+  overflow: hidden;
+}
+
+#skills-section-dark > .ambient-blob,
+#about-section-dark > .ambient-blob {
+  display: none;
+}
+
+/* A card must fill its section track; otherwise flex centering leaves a blank
+   band above it while the next section is entering. */
+#services-section-dark-inner,
+#works-section-inner,
+#skills-section-dark-inner,
+#about-section-dark-inner {
+  min-height: 100vh;
+}
+
+/* Connected card stack: the next section meets the previous card directly. */
+#portfolio-root {
+  --section-gap: 0px;
+}
+
+#works-section,
+#skills-section-dark,
+#about-section-dark,
+#contact-section-dark {
+  margin-top: var(--section-gap);
+  scroll-margin-top: var(--section-gap);
+}
+
+#works-section {
+  z-index: 30;
+}
+
+/* Selected Works is a single, continuous card. Its individual projects are
+   content blocks inside it, not separately stacked sections. */
+#works-section-inner {
+  color: #eae7df;
+}
+
+#works-intro-sticky-inner,
+#project-bi-dashboard-inner,
+#project-eco-ecommerce-inner,
+#project-gta6-parody-inner,
+#project-xnerds-portal-inner,
+#project-vitaloom-inner {
+  width: 100% !important;
+  margin-inline: 0 !important;
+  background: transparent !important;
+  border-radius: 0;
+}
+
+@media (max-width: 767px) {
+  #hero-section .hero-name {
+    font-size: 16vw;
+    letter-spacing: -0.025em;
+  }
+
+  #hero-section .hero-left {
+    padding: 0;
+    justify-content: initial;
+  }
+}
+
+/* ── Lenis smooth scrolling helper styles ────────────────────────── */
 html.lenis, html.lenis body {
   height: auto;
 }
@@ -34,4 +173,218 @@ html.lenis, html.lenis body {
 
 .lenis-scrolling iframe {
   pointer-events: none;
+}
+
+/* ── Film-grain noise overlay ────────────────────────────────────── */
+#portfolio-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  animation: grain-shift 0.8s steps(2) infinite;
+}
+
+@keyframes grain-shift {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-2px, 1px); }
+  50%  { transform: translate(1px, -2px); }
+  75%  { transform: translate(2px, 2px); }
+  100% { transform: translate(-1px, -1px); }
+}
+
+/* ── Slow-drifting ambient blob in dark sections ─────────────────── */
+.ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(90px);
+  opacity: 0.06;
+  animation: blob-drift 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.ambient-blob-2 {
+  animation-duration: 24s;
+  animation-delay: -8s;
+}
+
+@keyframes blob-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(30px, -20px) scale(1.05); }
+  66%  { transform: translate(-20px, 15px) scale(0.96); }
+  100% { transform: translate(15px, 30px) scale(1.02); }
+}
+
+/* ── Clip-path text reveal helper ────────────────────────────────── */
+.text-clip-reveal {
+  overflow: hidden;
+}
+
+.text-clip-reveal > * {
+  display: block;
+}
+
+/* ── Premium button hover transitions ────────────────────────────── */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pill / rounded CTA buttons — lift + glow on hover */
+button[id*="cta"], a[id*="cta"],
+button[class*="rounded-full"], a[class*="rounded-full"] {
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.25s ease,
+    color 0.25s ease;
+  will-change: transform;
+}
+
+button[id*="cta"]:hover, a[id*="cta"]:hover,
+button[class*="rounded-full"]:hover, a[class*="rounded-full"]:hover {
+  transform: translate3d(0, -2px, 0) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+button[id*="cta"]:active, a[id*="cta"]:active,
+button[class*="rounded-full"]:active, a[class*="rounded-full"]:active {
+  transform: translate3d(0, 0, 0) scale(0.97);
+  transition-duration: 0.1s;
+}
+
+/* ── Animated link underline (hover from left) ───────────────────── */
+a[class*="relative"][class*="group"] .underline-hover,
+a .underline-hover {
+  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+a[class*="relative"][class*="group"]:hover .underline-hover,
+a:hover .underline-hover {
+  width: 100%;
+}
+
+/* ── Nav link hover ─────────────────────────────────────────────── */
+nav button, nav a {
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+/* ── Card hover — lift + shadow ──────────────────────────────────── */
+[class*="rounded"][class*="border"][class*="group"] {
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* ── Project image wrapper hover ─────────────────────────────────── */
+[class*="aspect-[16"] {
+  transition: box-shadow 0.4s ease;
+}
+
+[class*="aspect-[16"]:hover {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Input focus glow (Contact section) ─────────────────────────── */
+input, textarea {
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(234, 231, 223, 0.08), 0 1px 0 0 rgba(234, 231, 223, 0.3);
+}
+
+/* ── Floating hamburger ring pulse on appear ─────────────────────── */
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(28,27,26,0.15); }
+  70%  { box-shadow: 0 0 0 12px rgba(28,27,26,0); }
+  100% { box-shadow: 0 0 0 0 rgba(28,27,26,0); }
+}
+
+#floating-hamburger-trigger {
+  animation: ring-pulse 2.5s ease-out infinite;
+}
+
+/* ── Skill items — icon float effect ─────────────────────────────── */
+@keyframes float-icon {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%       { transform: translate3d(0, -4px, 0); }
+}
+
+/* ── Service rows — hover left accent ───────────────────────────── */
+.service-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.service-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.service-row:hover::before {
+  opacity: 0.3;
+  transform: scaleY(1);
+}
+
+/* ── Section inner will-change setup ─────────────────────────────── */
+[id$="-inner"] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ── Smooth section transitions ──────────────────────────────────── */
+section {
+  backface-visibility: hidden;
+}
+
+/* ── Typography antialiasing ─────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Reduce motion overrides ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  #portfolio-root::before {
+    animation: none;
+    opacity: 0;
+  }
+  
+  .ambient-blob {
+    animation: none;
+  }
 }

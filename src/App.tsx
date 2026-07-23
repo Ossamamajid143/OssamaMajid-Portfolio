@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react';
-import { ArrowDownLeft, ArrowUpRight, Clock, MapPin, Menu, Globe, Calendar, X } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Menu, Globe, X } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Modal from './components/Modal';
+import useCurtainScroll from './hooks/useCurtainScroll';
 import {
   ServicesContent,
   WorksContent,
@@ -22,11 +23,13 @@ import heroImage from './assets/images/cozy_artistic_room_1784106403072.jpg';
 
 export default function App() {
   const [activePanel, setActivePanel] = useState<'services' | 'works' | 'about' | 'contact' | null>(null);
-  const [currentTime, setCurrentTime] = useState('');
   const [dateInfo, setDateInfo] = useState({ month: '', day: '', year: '', weekday: '' });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showFloatingButton, setShowFloatingButton] = useState(false);
   const [isOverlayMenuOpen, setIsOverlayMenuOpen] = useState(false);
+  const [isNavHidden, setIsNavHidden] = useState(false);
+  const lastScrollY = React.useRef(0);
+  const navHideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Parallax spring-based movement logic for Hero Image (max 8px movement)
   const mouseX = useMotionValue(0);
@@ -71,129 +74,62 @@ export default function App() {
     }
   };
 
-  // Scroll triggered floating button visibility
+  // Scroll triggered floating button + navbar hide/show
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const threshold = window.innerHeight * 0.8; // 80% of viewport leaves
-      if (scrollY >= threshold) {
-        setShowFloatingButton(true);
+    const threshold = window.innerHeight * 0.75; // slightly lower so button appears sooner
+
+    const handleScroll = (scrollY?: number) => {
+      const y = typeof scrollY === 'number' ? scrollY : window.scrollY;
+
+      // Floating button visibility
+      setShowFloatingButton(y >= threshold);
+
+      // Navbar hide on scroll-down / reveal on scroll-up (only after 80px)
+      if (y > 80) {
+        const delta = y - lastScrollY.current;
+        if (delta > 4) {
+          // Scrolling down — hide nav
+          setIsNavHidden(true);
+          if (navHideTimer.current) clearTimeout(navHideTimer.current);
+        } else if (delta < -3) {
+          // Scrolling up — reveal nav
+          setIsNavHidden(false);
+        }
       } else {
-        setShowFloatingButton(false);
+        setIsNavHidden(false);
       }
+      lastScrollY.current = y;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Run once initially
+    // If Lenis is in use, subscribe to its events; otherwise fall back to native scroll
+    const lenis = lenisRef.current;
+    if (lenis && typeof lenis.on === 'function') {
+      // Lenis emits a numeric scroll value in its event payload (varies by version).
+      const lenisHandler = (e: any) => {
+        // Try the most common shapes: e.scroll or e.target?.scroll or e. Scroll
+        const val = e && (typeof e === 'number' ? e : e.scroll ?? e.deltaY ?? window.scrollY);
+        handleScroll(typeof val === 'number' ? val : window.scrollY);
+      };
+      lenis.on('scroll', lenisHandler);
+
+      // Call once to sync initial state
+      handleScroll(lenis.scroll ?? window.scrollY);
+
+      return () => {
+        if (lenis && typeof lenis.off === 'function') lenis.off('scroll', lenisHandler);
+        if (navHideTimer.current) clearTimeout(navHideTimer.current);
+      };
+    }
+
+    window.addEventListener('scroll', () => handleScroll(), { passive: true });
     handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Initialize global Lenis smooth scrolling and GSAP scroll transitions
-  useEffect(() => {
-    // 1. Initialize Lenis
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
-      smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 1.5,
-    });
-
-    lenisRef.current = lenis;
-
-    // Connect ScrollTrigger to Lenis scroll updates
-    lenis.on('scroll', ScrollTrigger.update);
-
-    let rafId: number;
-    const raf = (time: number) => {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    };
-    rafId = requestAnimationFrame(raf);
-
-    // 2. Setup GSAP MatchMedia for global curtain scroll-linked transition effects (Desktop only)
-    const mm = gsap.matchMedia();
-
-    mm.add('(min-width: 768px)', () => {
-      gsap.registerPlugin(ScrollTrigger);
-
-      // In order, the major segments of the curtain stack:
-      const sections = [
-        { id: 'hero-section', innerId: 'hero-section-inner' },
-        { id: 'services-section-dark', innerId: 'services-section-dark-inner' },
-        { id: 'works-intro-sticky', innerId: 'works-intro-sticky-inner' },
-        { id: 'project-nura', innerId: 'project-nura-inner' },
-        { id: 'project-jobportal', innerId: 'project-jobportal-inner' },
-        { id: 'project-productize', innerId: 'project-productize-inner' },
-        { id: 'project-cinerec', innerId: 'project-cinerec-inner' },
-        { id: 'project-code2img', innerId: 'project-code2img-inner' },
-        { id: 'skills-section-dark', innerId: 'skills-section-dark-inner' },
-        { id: 'about-section-dark', innerId: 'about-section-dark-inner' },
-        { id: 'contact-section-dark', innerId: 'contact-section-dark-inner' }
-      ];
-
-      sections.forEach((section, idx) => {
-        const innerEl = document.getElementById(section.innerId);
-        if (innerEl) {
-          gsap.set(innerEl, { transformOrigin: 'center center', force3D: true });
-        }
-
-        if (idx === 0) return; // No incoming animation for hero itself
-
-        const prevSection = sections[idx - 1];
-        const prevInner = document.getElementById(prevSection.innerId);
-        const currentInner = document.getElementById(section.innerId);
-        const currentOuter = document.getElementById(section.id);
-
-        if (!currentOuter) return;
-
-        // Custom transition timeline linked to ScrollTrigger
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: currentOuter,
-            start: 'top bottom',
-            end: 'top top',
-            scrub: true,
-            invalidateOnRefresh: true,
-          }
-        });
-
-        // Outgoing section scales down (100% -> 98%) and fades slightly (1 -> 0.9)
-        if (prevInner) {
-          tl.to(prevInner, {
-            scale: 0.98,
-            opacity: 0.9,
-            ease: 'power1.inOut'
-          }, 0);
-        }
-
-        // Incoming section fades in (0 -> 1) and scales down (1.02 -> 1)
-        if (currentInner) {
-          tl.fromTo(currentInner,
-            {
-              scale: 1.02,
-              opacity: 0
-            },
-            {
-              scale: 1,
-              opacity: 1,
-              ease: 'power1.inOut'
-            },
-            0
-          );
-        }
-      });
-    });
-
     return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      mm.revert();
+      window.removeEventListener('scroll', () => handleScroll());
+      if (navHideTimer.current) clearTimeout(navHideTimer.current);
     };
   }, []);
+
+  useCurtainScroll(lenisRef, activePanel, isOverlayMenuOpen);
 
   // Pause Lenis scrolling when modals or overlay menus are open
   useEffect(() => {
@@ -235,16 +171,6 @@ export default function App() {
         year: yearShort,
         weekday: weekdayStr
       });
-
-      // Monospace time format: HH:MM:SS AM/PM
-      setCurrentTime(
-        now.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        }).toUpperCase()
-      );
     };
 
     updateDateTime();
@@ -255,14 +181,16 @@ export default function App() {
   return (
     <div id="portfolio-root" className="min-h-screen bg-[#eae8e4] text-[#1c1b1a] relative overflow-x-hidden selection:bg-[#1c1b1a] selection:text-[#eae8e4] flex flex-col font-sans">
       
-      {/* 1. HERO BLOCK SECTION (Light Background) */}
+      {/* 1. HERO BLOCK SECTION (Light Background, Curtain Stack Base) */}
       <section
         id="hero-section"
-        className="w-full md:sticky md:top-0 z-0 md:h-screen min-h-screen bg-[#eae8e4] text-[#1c1b1a] overflow-hidden flex flex-col justify-between relative animate-none"
+        style={{ zIndex: 10 }}
+        className="w-full sticky top-0 h-screen min-h-screen bg-[#eae8e4] text-[#1c1b1a] overflow-hidden flex flex-col justify-between relative animate-none"
       >
         <div
           id="hero-section-inner"
-          className="w-full h-full p-6 md:p-10 lg:p-12 flex flex-col justify-between"
+          className="hero-reference w-full h-full p-6 md:p-10 lg:px-[2.75vw] lg:pt-[2.75vw] lg:pb-2 flex flex-col justify-between"
+          style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
         >
         
         {/* 1.1 HEADER SECTOR */}
@@ -271,32 +199,28 @@ export default function App() {
           style={{
             opacity: showFloatingButton ? 0 : 1,
             pointerEvents: showFloatingButton ? 'none' : 'auto',
-            transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-            transform: showFloatingButton ? 'translateY(-10px)' : 'translateY(0)',
+            transition: 'opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+            transform: (showFloatingButton || isNavHidden) ? 'translate3d(0, -100%, 0)' : 'translate3d(0, 0, 0)',
           }}
           className="w-full flex items-center justify-between z-40"
         >
-          <div id="header-brand" className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <span className="font-display font-bold text-sm tracking-tight uppercase text-[#1c1b1a]">
+          <div id="header-brand" className="flex items-center">
+            <span className="hero-nav-copy font-sans text-sm md:text-[1.4vw] font-normal tracking-[-0.055em] text-[#6d6a63]">
               Web Developer & Designer
-            </span>
-            <span className="hidden sm:inline text-neutral-400 font-light text-xs">/</span>
-            <span className="font-mono text-[10px] tracking-wider text-neutral-500 uppercase flex items-center gap-1">
-              <Globe className="w-3 h-3 text-[#8c8a82]" /> AVAILABLE FOR CONTRACTS
             </span>
           </div>
 
           {/* Desktop Navigation */}
-          <nav id="desktop-nav" className="hidden md:flex items-center gap-8">
+          <nav id="desktop-nav" className="hidden md:flex items-center gap-[1.15vw]">
             {(['services', 'works', 'about', 'contact'] as const).map((panel) => (
               <button
                 key={panel}
                 onClick={() => scrollToSection(panel)}
                 id={`nav-link-${panel}`}
-                className="font-mono text-xs uppercase tracking-widest text-[#1c1b1a] hover:text-[#8c8a82] transition-colors relative group py-1 cursor-pointer"
+                className="hero-nav-copy font-sans text-[1.4vw] capitalize tracking-[-0.055em] text-[#6d6a63] hover:text-[#393633] transition-colors relative group py-1 cursor-pointer"
               >
-                {panel}
-                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#8c8a82] group-hover:w-full transition-all duration-300" />
+                {panel.charAt(0).toUpperCase() + panel.slice(1)}
+                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#6d6a63] group-hover:w-full transition-all duration-300" />
               </button>
             ))}
           </nav>
@@ -305,7 +229,7 @@ export default function App() {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             id="mobile-nav-trigger"
-            className="p-1.5 md:hidden text-[#1c1b1a] hover:text-[#8c8a82] transition-colors cursor-pointer"
+            className="p-1.5 md:hidden text-[#1c1b1a] hover:text-[#706e6a] transition-colors cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             <Menu className="w-5 h-5" />
@@ -346,42 +270,40 @@ export default function App() {
         </AnimatePresence>
 
         {/* 1.2 MAIN HERO NAME BANNER */}
-        <main id="main-hero-area" className="flex-1 flex flex-col justify-center my-6 lg:my-10">
-          <div className="w-full text-center py-4">
+        <main id="main-hero-area" className="hero-main flex-1 flex flex-col justify-center lg:justify-end my-6 lg:my-0">
+          <div className="hero-name-wrap w-full text-center py-4">
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
               id="hero-name-heading"
-              className="font-display font-extrabold text-[13.2vw] leading-[0.8] tracking-tighter text-[#1c1b1a] uppercase select-none w-full"
+              className="hero-name font-display font-extrabold text-[14.2vw] leading-[0.8] tracking-[-0.025em] text-[#151515] uppercase select-none w-full"
             >
               OSSAMA MAJID
             </motion.h1>
           </div>
 
           {/* 1.3 THREE-COLUMN BENTO STAGE */}
-          <div id="bento-three-columns" className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-4 items-center mt-6 lg:mt-12">
+          <div id="bento-three-columns" className="hero-bento grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-4 items-center mt-6 lg:mt-[3.1vw]">
             
             {/* Left Column - Intro and CTA */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={false}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
+              transition={{ duration: 0.45, delay: 0.05 }}
               id="bento-col-left"
-              className="col-span-1 md:col-span-4 space-y-6 flex flex-col items-start"
+              className="hero-left col-span-1 md:col-span-4 space-y-6 flex flex-col items-start"
             >
-              <div className="p-1 rounded bg-[#e1dfda] inline-flex">
-                <ArrowDownLeft className="w-6 h-6 text-[#8c8a82] animate-bounce" />
-              </div>
+              <ArrowDownRight className="hero-arrow w-6 h-6 md:w-[2.4vw] md:h-[2.4vw] text-[#8b8b75] stroke-[1.35]" />
 
-              <p className="text-[#3a3937] text-base md:text-[15px] lg:text-lg leading-relaxed max-w-[280px] md:max-w-[320px] font-light">
+              <p className="hero-intro text-[#6d6a63] text-base md:text-[1.65vw] leading-[1.33] tracking-[-0.055em] max-w-[280px] md:max-w-[28vw] font-normal">
                 I build fast, modern websites that help businesses grow, available for freelance projects worldwide.
               </p>
 
               <button
                 onClick={() => setActivePanel('contact')}
                 id="cta-contact-button"
-                className="bg-[#2d2c2a] text-[#f4f3ef] px-6 py-3 rounded-full hover:bg-[#1a1918] active:scale-95 transition-all flex items-center gap-2 uppercase tracking-wide text-xs font-semibold select-none group cursor-pointer shadow-sm"
+                className="hero-contact bg-[#393633] text-[#f4f3ef] px-6 py-3 md:px-[2.05vw] md:py-[1.45vw] rounded-full hover:bg-[#1a1918] active:scale-95 transition-all flex items-center gap-2 uppercase tracking-[-0.045em] text-xs md:text-[1.45vw] font-medium select-none group cursor-pointer shadow-sm"
               >
                 <span>CONTACT</span>
                 <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -390,16 +312,16 @@ export default function App() {
 
             {/* Middle Column - Grayscale Center Photo */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.0, ease: 'easeOut' }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
               id="bento-col-center"
-              className="col-span-1 md:col-span-4 flex justify-center items-center"
+              className="hero-photo-col col-span-1 md:col-span-4 flex justify-center items-center"
             >
               <div
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                className="relative w-full max-w-[280px] md:max-w-[320px] aspect-[3/4] rounded-[20px] overflow-hidden shadow-xl border border-[#d6d4ce]/80 bg-[#eae8e4] group cursor-pointer transition-shadow duration-300 hover:shadow-2xl"
+                className="hero-photo relative w-full max-w-[280px] md:max-w-[22.5vw] aspect-[4/5] rounded-[7px] overflow-hidden shadow-none border-0 bg-[#eae8e4] group cursor-pointer transition-shadow duration-300 hover:shadow-2xl"
               >
                 <motion.img
                   src={heroImage}
@@ -415,36 +337,24 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* Right Column - Dynamic Daily Available Date & Real-time Monospace Clock */}
+            {/* Right Column - Dynamic Month'Year (e.g. JUL'26) matching reference image */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={false}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
+              transition={{ duration: 0.45, delay: 0.06 }}
               id="bento-col-right"
-              className="col-span-1 md:col-span-4 flex flex-col justify-end items-start md:items-end text-left md:text-right space-y-4"
+              className="hero-date-col col-span-1 md:col-span-4 flex flex-col justify-end items-start md:items-end text-left md:text-right space-y-2"
             >
               <div className="flex flex-col items-start md:items-end group select-none">
-                <span className="font-mono text-[10px] tracking-[0.2em] text-[#706e6a] uppercase mb-1 flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3 text-[#8c8a82]" /> AVAILABLE FOR WORK
+                <span className="hero-available font-mono text-[10px] md:text-[1.15vw] tracking-[0.09em] text-[#706e6a] uppercase mb-1">
+                  AVAILABLE FOR WORK
                 </span>
 
-                {/* The big daily auto-updating date */}
-                <div id="dynamic-available-date" className="font-display font-extrabold text-7xl sm:text-8xl lg:text-9xl tracking-tighter leading-none text-[#1c1b1a] flex items-baseline hover:scale-102 transition-transform duration-300">
+                {/* Big Month'Year display (e.g. JUL'26) matching reference image */}
+                <div id="dynamic-available-date" className="hero-date font-display font-extrabold text-7xl sm:text-8xl lg:text-[6.7vw] tracking-[-0.09em] leading-[0.78] text-[#393633] flex items-baseline hover:scale-102 transition-transform duration-300">
                   <span>{dateInfo.month}</span>
-                  <span className="text-[#8c8a82] font-light mx-1">'</span>
-                  <span>{dateInfo.day}</span>
-                </div>
-              </div>
-
-              {/* Micro details: live ticking clock and location */}
-              <div className="space-y-1 font-mono text-[10px] tracking-wider text-neutral-500">
-                <div className="flex items-center gap-1.5 justify-start md:justify-end">
-                  <Clock className="w-3 h-3 text-[#8c8a82] animate-pulse" />
-                  <span>LOCAL TIME: <span className="text-[#1c1b1a] font-medium">{currentTime}</span></span>
-                </div>
-                <div className="flex items-center gap-1.5 justify-start md:justify-end">
-                  <MapPin className="w-3 h-3 text-[#8c8a82]" />
-                  <span>GLOBALLY ONLINE • UTC-07:00</span>
+                  <span className="text-[#1c1b1a] font-light mx-0.5">'</span>
+                  <span>{dateInfo.year}</span>
                 </div>
               </div>
             </motion.div>
@@ -467,8 +377,10 @@ export default function App() {
       {/* 2.6. ABOUT ME SECTION (Dark Full-bleed Background) */}
       <AboutSection />
 
-      {/* 2.7. CONTACT & FOOTER SECTION (Curtain stack, Dark to Light reveal) */}
+      {/* 2.7. CONTACT SECTION (Curtain stack, Dark to Light reveal) */}
       <ContactSection />
+
+
 
       {/* 4. INTERACTIVE NAVIGATIONAL DRAWER OVERLAYS */}
       <Modal
@@ -513,24 +425,19 @@ export default function App() {
             transition={{ duration: 0.35, ease: 'easeOut' }}
             onClick={() => setIsOverlayMenuOpen(!isOverlayMenuOpen)}
             id="floating-hamburger-trigger"
-            className="fixed top-6 right-6 md:top-10 md:right-10 z-50 w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#eae8e4]/90 backdrop-blur-md hover:bg-[#eae8e4] text-[#1c1b1a] shadow-2xl flex flex-col items-center justify-center gap-1.5 border border-[#1c1b1a]/10 hover:scale-110 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 transition-all duration-300 cursor-pointer"
+            className="fixed top-6 right-6 md:top-10 md:right-10 z-[100] w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#eae8e4]/90 backdrop-blur-md hover:bg-[#eae8e4] text-[#1c1b1a] shadow-2xl flex flex-col items-center justify-center gap-[7px] border border-[#1c1b1a]/10 hover:scale-110 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 transition-all duration-300 cursor-pointer"
             aria-label={isOverlayMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           >
-            {/* Morphing 3 lines into an X */}
+            {/* Morphing 2 lines into an X */}
             <motion.div
-              animate={isOverlayMenuOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="w-6 h-[2px] bg-[#1c1b1a] rounded-full"
+              animate={isOverlayMenuOpen ? { rotate: 45, y: 5.5 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="w-5 h-[1.5px] bg-[#1c1b1a] rounded-full"
             />
             <motion.div
-              animate={isOverlayMenuOpen ? { opacity: 0 } : { opacity: 1 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="w-6 h-[2px] bg-[#1c1b1a] rounded-full"
-            />
-            <motion.div
-              animate={isOverlayMenuOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="w-6 h-[2px] bg-[#1c1b1a] rounded-full"
+              animate={isOverlayMenuOpen ? { rotate: -45, y: -5.5 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="w-5 h-[1.5px] bg-[#1c1b1a] rounded-full"
             />
           </motion.button>
         )}
@@ -545,7 +452,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
             id="full-screen-menu-overlay"
-            className="fixed inset-0 z-40 bg-[#050505]/98 backdrop-blur-xl flex flex-col justify-between p-6 md:p-12 lg:p-16 text-[#eae7df] overflow-hidden"
+            className="fixed inset-0 z-[90] bg-[#050505]/98 backdrop-blur-xl flex flex-col justify-between p-6 md:p-12 lg:p-16 text-[#eae7df] overflow-hidden"
           >
             {/* Elegant curved background circle accents for high-end feel */}
             <div className="absolute top-0 right-0 w-[90vw] h-[90vw] max-w-[900px] max-h-[900px] rounded-full bg-[#111111] -translate-y-1/4 translate-x-1/4 pointer-events-none z-0" />
@@ -561,36 +468,40 @@ export default function App() {
                   {
                     label: 'HOME',
                     action: () => {
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
                       setIsOverlayMenuOpen(false);
+                      // Small delay lets Lenis restart before we scroll
+                      setTimeout(() => {
+                        if (lenisRef.current) lenisRef.current.scrollTo(0, { duration: 1.4 });
+                        else window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 180);
                     }
                   },
                   {
                     label: 'SERVICES',
                     action: () => {
-                      scrollToSection('services');
                       setIsOverlayMenuOpen(false);
+                      setTimeout(() => scrollToSection('services'), 180);
                     }
                   },
                   {
                     label: 'WORKS',
                     action: () => {
-                      scrollToSection('works');
                       setIsOverlayMenuOpen(false);
+                      setTimeout(() => scrollToSection('works'), 180);
                     }
                   },
                   {
                     label: 'ABOUT',
                     action: () => {
-                      scrollToSection('about');
                       setIsOverlayMenuOpen(false);
+                      setTimeout(() => scrollToSection('about'), 180);
                     }
                   },
                   {
                     label: 'CONTACT',
                     action: () => {
-                      scrollToSection('contact');
                       setIsOverlayMenuOpen(false);
+                      setTimeout(() => scrollToSection('contact'), 180);
                     }
                   }
                 ].map((item, idx) => (
@@ -609,19 +520,19 @@ export default function App() {
             </div>
 
             {/* Footer sector inside full screen overlay */}
-            <div className="relative w-full max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-6 z-10 pt-4 border-t border-neutral-800/30">
+            <div className="relative w-full max-w-7xl mx-auto flex flex-col justify-start gap-3 z-10 pt-4 border-t border-neutral-800/30">
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.45, duration: 0.5 }}
-                className="flex flex-col space-y-1.5"
+                className="flex flex-col space-y-1"
               >
                 <span className="font-mono text-[10px] tracking-widest text-[#8c8a82] uppercase">EMAIL ADDRESS</span>
                 <a
-                  href="mailto:contact@zunedaalim.com"
-                  className="font-display font-bold text-lg sm:text-xl text-[#eae7df] hover:text-[#8c8a82] transition-colors"
+                  href="mailto:osamamajid143@gmail.com"
+                  className="font-mono text-sm sm:text-base text-[#eae7df] hover:text-[#8c8a82] transition-colors tracking-wide"
                 >
-                  contact@zunedaalim.com
+                  osamamajid143@gmail.com
                 </a>
               </motion.div>
 
@@ -631,9 +542,8 @@ export default function App() {
                 transition={{ delay: 0.52, duration: 0.5 }}
                 className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-widest text-[#8c8a82]"
               >
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">LinkedIn</a>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Github</a>
-                <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Leetcode</a>
+                <a href="https://www.linkedin.com/in/ossama-majid" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">LinkedIn</a>
+                <a href="https://github.com/Ossamamajid143" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Github</a>
               </motion.div>
             </div>
           </motion.div>

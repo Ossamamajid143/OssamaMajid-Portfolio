@@ -79,13 +79,15 @@ export default function ContactSection() {
   return (
     <section
       id="contact-section-dark"
-      className="w-full md:sticky md:top-0 z-50 min-h-screen bg-[#050505] flex flex-col justify-between overflow-hidden relative"
+      style={{ zIndex: 60 }}
+      className="w-full relative z-[60] bg-[#050505] flex flex-col justify-between min-h-screen"
     >
       <div
         id="contact-section-dark-inner"
-        className="w-full h-full flex flex-col justify-between"
+        className="w-full h-full flex flex-col justify-between min-h-screen"
+        style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
       >
-      {/* 1. CONTACT FORM AREA (Black Background) */}
+        {/* 1. CONTACT FORM AREA (Black Background) */}
       <div className="w-full px-6 py-20 md:py-36 lg:py-40 flex flex-col items-center justify-center relative">
         {/* Top boundary separator matching previous sections */}
         <div className="absolute inset-x-0 top-0 h-[1px] bg-neutral-800/60 pointer-events-none" />
@@ -93,25 +95,17 @@ export default function ContactSection() {
         <div className="max-w-4xl mx-auto w-full flex flex-col items-center text-center space-y-12">
           
           {/* LARGE DISPLAY TYPOGRAPHY HEADING */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          <div
             className="flex flex-col font-display font-black uppercase leading-[0.85] text-[#EAE7DF] select-none tracking-tighter"
             style={{ fontSize: 'clamp(3.5rem, 9.5vw, 8.5rem)' }}
           >
-            <span>LET'S MAKE</span>
-            <span>IT HAPPEN</span>
-          </motion.div>
+            <span className="contact-heading-line">LET'S MAKE</span>
+            <span className="contact-heading-line">IT HAPPEN</span>
+          </div>
 
           {/* CONTACT FORM CONTAINER */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-xl rounded-2xl md:rounded-3xl bg-[#121211] border border-neutral-800/50 p-6 sm:p-10 md:p-12 shadow-2xl relative overflow-hidden"
+          <div
+            className="contact-cta-reveal w-full max-w-xl rounded-2xl md:rounded-3xl bg-[#121211] border border-neutral-800/50 p-6 sm:p-10 md:p-12 shadow-2xl relative overflow-hidden"
           >
             <h3 className="font-sans font-light text-xl sm:text-2xl text-[#eae8e4] mb-8 text-center tracking-tight">
               Have a project in mind?
@@ -192,7 +186,7 @@ export default function ContactSection() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </div>
 
         </div>
       </div>
@@ -234,7 +228,7 @@ export default function ContactSection() {
             <div className="w-full h-[1px] bg-[#1c1b1a]/10 max-w-xs" />
             <div className="flex flex-col space-y-2 font-sans font-medium text-base text-[#1c1b1a]/80">
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/ossama-majid"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#1c1b1a] hover:pl-1.5 transition-all duration-300 w-fit"
@@ -242,15 +236,15 @@ export default function ContactSection() {
                 Linkedin
               </a>
               <a
-                href="https://instagram.com"
+                href="https://x.com/osamaxmajid?s=21"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#1c1b1a] hover:pl-1.5 transition-all duration-300 w-fit"
               >
-                Instagram
+                X (Twitter)
               </a>
               <a
-                href="https://github.com"
+                href="https://github.com/Ossamamajid143"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#1c1b1a] hover:pl-1.5 transition-all duration-300 w-fit"
@@ -262,23 +256,38 @@ export default function ContactSection() {
 
         </div>
 
-        {/* BOTTOM METRICS BAR (Local Time & Copyright) */}
-        <div className="max-w-7xl mx-auto w-full mt-16 md:mt-24 pt-8 border-t border-[#1c1b1a]/10 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
-          
+        {/* BOTTOM METRICS BAR (Local Time, Copyright & Scroll-to-top) */}
+        <div className="contact-footer-bar max-w-7xl mx-auto w-full mt-16 md:mt-24 pt-8 border-t border-[#1c1b1a]/10 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
+
           {/* Copyright Info */}
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 uppercase select-none">
             <div>© {new Date().getFullYear()} OSSAMA MAJID.</div>
-            <div className="mt-1">DESIGN & FRONTEND ARCHITECTURE.</div>
+            <div className="mt-1">DESIGN &amp; FRONTEND ARCHITECTURE.</div>
           </div>
 
-          {/* Ticking Local Time */}
-          <div className="flex flex-col space-y-1.5">
-            <span className="font-mono text-[10px] tracking-widest text-[#8c8a82] uppercase select-none">
-              LOCAL TIME
-            </span>
-            <span className="font-sans font-bold text-lg md:text-xl text-[#1c1b1a] tracking-tight tabular-nums">
-              {currentTime || '3:56:50 PM, IST'}
-            </span>
+          {/* LOCAL TIME + Scroll to Top button */}
+          <div className="flex items-end gap-6">
+            <div className="flex flex-col space-y-1.5">
+              <span className="font-mono text-[10px] tracking-widest text-[#8c8a82] uppercase select-none font-semibold">
+                LOCAL TIME
+              </span>
+              <span className="font-sans font-bold text-lg md:text-xl text-[#1c1b1a] tracking-tight tabular-nums">
+                {currentTime || '—'}
+              </span>
+            </div>
+
+            {/* Scroll-to-top arrow button */}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              id="scroll-to-top-btn"
+              aria-label="Scroll to top"
+              className="w-12 h-12 rounded-full bg-[#d6d4ce] hover:bg-[#1c1b1a] text-[#1c1b1a] hover:text-[#eae8e4] flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
           </div>
 
         </div>

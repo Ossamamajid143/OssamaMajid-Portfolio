@@ -253,11 +253,13 @@ export default function ServicesSection() {
     <section
       ref={containerRef}
       id="services-section-dark"
-      className="w-full md:sticky md:top-0 z-10 min-h-screen bg-[#050505] text-[#EAE7DF] overflow-hidden relative flex flex-col justify-center"
+      style={{ zIndex: 20 }}
+      className="w-full sticky top-0 min-h-screen bg-[#050505] text-[#EAE7DF] overflow-hidden relative flex flex-col justify-center"
     >
       <div
         id="services-section-dark-inner"
-        className="w-full h-full px-6 py-20 md:py-28 lg:py-36 flex flex-col justify-center"
+        className="w-full h-full px-6 py-16 md:py-24 lg:py-28 flex flex-col justify-center"
+        style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
       >
       {/* Decorative ambient borders */}
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[#EAE7DF]/10 to-transparent pointer-events-none" />
