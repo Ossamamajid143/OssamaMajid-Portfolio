@@ -8,10 +8,10 @@ const prefersReducedMotion = () =>
 
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
-// Scale distances for mobile — less movement on touch
+// Scale distances for mobile — subtle controlled movement
 const dist = (d: number) => (isTouch() ? d * 0.5 : d);
 
-// ─── Generic fade-up helper ───────────────────────────────────────────
+// ─── Generic Fade-Up Helper ───────────────────────────────────────────
 function fadeUp(
   el: Element | string | null,
   opts: {
@@ -19,14 +19,15 @@ function fadeUp(
     delay?: number;
     duration?: number;
     ease?: string;
-    trigger?: Element | string | null;
+    trigger?: Element | string | null | false;
     start?: string;
   } = {}
 ) {
   if (!el) return;
+  const noScrollTrigger = opts.trigger === null || opts.trigger === false;
   gsap.fromTo(
     el,
-    { opacity: 0, y: opts.y ?? dist(50), force3D: true },
+    { opacity: 0, y: opts.y ?? dist(40), force3D: true },
     {
       opacity: 1,
       y: 0,
@@ -34,7 +35,7 @@ function fadeUp(
       delay: opts.delay ?? 0,
       ease: opts.ease ?? 'power3.out',
       clearProps: 'transform',
-      scrollTrigger: {
+      scrollTrigger: noScrollTrigger ? undefined : {
         trigger: (opts.trigger ?? el) as gsap.DOMTarget,
         start: opts.start ?? 'top 88%',
         toggleActions: 'play none none none',
@@ -43,99 +44,131 @@ function fadeUp(
   );
 }
 
-// ─── Split text into word spans for stagger ──────────────────────────
-function splitWords(el: Element): HTMLSpanElement[] {
-  const text = el.textContent ?? '';
-  const words = text.trim().split(/\s+/);
-  el.textContent = '';
+// ─── Premium Line-Mask Text Reveal Helper ────────────────────────────
+/**
+ * Wraps text lines/words into overflow-hidden clip masks,
+ * then animates inner spans from bottom-to-top (yPercent: 110 -> 0) with power4.out.
+ */
+function revealLinesMask(
+  el: Element | null,
+  opts: {
+    trigger?: Element | null | false;
+    start?: string;
+    delay?: number;
+    duration?: number;
+    stagger?: number;
+    ease?: string;
+    byWords?: boolean;
+  } = {}
+) {
+  if (!el) return;
+
+  // Prevent duplicate wrapping
+  if (el.getAttribute('data-mask-split') === 'true') return;
+  el.setAttribute('data-mask-split', 'true');
+
+  const text = el.textContent?.trim() || '';
+  if (!text) return;
+
+  const rawHtml = el.innerHTML.trim();
+  const hasBr = rawHtml.includes('<br>');
+
+  let segments: string[] = [];
+  if (hasBr) {
+    segments = rawHtml.split(/<br\s*\/?>/i);
+  } else if (opts.byWords) {
+    segments = text.split(/\s+/);
+  } else {
+    // Default: split words or preserve single line
+    segments = text.split(/\s+/);
+  }
+
+  el.innerHTML = '';
   el.setAttribute('aria-label', text);
-  return words.map((word) => {
-    const span = document.createElement('span');
-    span.textContent = word;
-    span.style.display = 'inline-block';
-    span.style.willChange = 'transform, opacity';
-    el.appendChild(span);
-    // Keep the whitespace outside the inline-block. Trailing whitespace inside
-    // an inline-block can collapse at line breaks and made About's words join.
-    el.appendChild(document.createTextNode(' '));
-    return span;
+
+  const targets: HTMLElement[] = [];
+
+  segments.forEach((segText, i) => {
+    const maskSpan = document.createElement('span');
+    maskSpan.className = 'mask-line-container';
+    maskSpan.style.display = 'inline-block';
+    maskSpan.style.overflow = 'hidden';
+    maskSpan.style.verticalAlign = 'top';
+    maskSpan.style.lineHeight = '1.05';
+    maskSpan.style.paddingBottom = '0.08em';
+
+    const innerSpan = document.createElement('span');
+    innerSpan.className = 'mask-line-inner';
+    innerSpan.innerHTML = segText;
+    innerSpan.style.display = 'inline-block';
+    innerSpan.style.willChange = 'transform, opacity';
+
+    maskSpan.appendChild(innerSpan);
+    el.appendChild(maskSpan);
+
+    if (i < segments.length - 1) {
+      if (opts.byWords || !hasBr) {
+        el.appendChild(document.createTextNode(' '));
+      } else {
+        el.appendChild(document.createElement('br'));
+      }
+    }
+
+    targets.push(innerSpan);
   });
-}
 
-// ─── Staggered word reveal ────────────────────────────────────────────
-function revealWords(
-  el: Element | null,
-  opts: { trigger?: Element | null; start?: string; delay?: number } = {}
-) {
-  if (!el) return;
-  const words = splitWords(el);
+  const triggerConfig = opts.trigger === false ? undefined : {
+    trigger: (opts.trigger ?? el) as gsap.DOMTarget,
+    start: opts.start ?? 'top 85%',
+    toggleActions: 'play none none none',
+  };
+
   gsap.fromTo(
-    words,
-    { opacity: 0, y: dist(40), rotateX: 8 },
+    targets,
     {
-      opacity: 1,
-      y: 0,
-      rotateX: 0,
-      duration: 0.85,
-      ease: 'power3.out',
-      stagger: 0.06,
-      delay: opts.delay ?? 0,
+      yPercent: 115,
+      opacity: 0,
+      rotateX: 6,
       force3D: true,
-      scrollTrigger: {
-        trigger: (opts.trigger ?? el) as gsap.DOMTarget,
-        start: opts.start ?? 'top 82%',
-        toggleActions: 'play none none none',
-      },
-    }
-  );
-}
-
-// ─── Line mask reveal (clip-path) ─────────────────────────────────────
-function lineReveal(
-  el: Element | null,
-  opts: { trigger?: Element | null; start?: string; delay?: number; duration?: number } = {}
-) {
-  if (!el) return;
-  gsap.fromTo(
-    el,
-    { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
+    },
     {
-      clipPath: 'inset(0 0% 0 0)',
+      yPercent: 0,
       opacity: 1,
-      duration: opts.duration ?? 1.0,
+      rotateX: 0,
+      duration: opts.duration ?? 1.2,
       delay: opts.delay ?? 0,
-      ease: 'power4.out',
-      scrollTrigger: {
-        trigger: (opts.trigger ?? el) as gsap.DOMTarget,
-        start: opts.start ?? 'top 85%',
-        toggleActions: 'play none none none',
-      },
+      ease: opts.ease ?? 'power4.out',
+      stagger: opts.stagger ?? 0.08,
+      force3D: true,
+      scrollTrigger: triggerConfig,
     }
   );
 }
 
-// ─── Staggered list item reveal ───────────────────────────────────────
+// ─── Staggered List / Element Reveal Helper ──────────────────────────
 function staggerFadeUp(
   els: NodeListOf<Element> | Element[],
-  opts: { trigger?: Element | null; start?: string; baseDelay?: number; stagger?: number; x?: number } = {}
+  opts: { trigger?: Element | null | false; start?: string; baseDelay?: number; stagger?: number; x?: number } = {}
 ) {
   if (!els || !els.length) return;
+  const triggerConfig = opts.trigger === false ? undefined : {
+    trigger: (opts.trigger ?? els[0]) as gsap.DOMTarget,
+    start: opts.start ?? 'top 88%',
+    toggleActions: 'play none none none',
+  };
+
   gsap.fromTo(
     Array.from(els),
-    { opacity: 0, y: dist(28), x: opts.x ?? 0, force3D: true },
+    { opacity: 0, y: dist(30), x: opts.x ?? 0, force3D: true },
     {
       opacity: 1,
       y: 0,
       x: 0,
-      duration: 0.65,
-      ease: 'power2.out',
+      duration: 0.85,
+      ease: 'power3.out',
       stagger: opts.stagger ?? 0.08,
       delay: opts.baseDelay ?? 0,
-      scrollTrigger: {
-        trigger: (opts.trigger ?? els[0]) as gsap.DOMTarget,
-        start: opts.start ?? 'top 88%',
-        toggleActions: 'play none none none',
-      },
+      scrollTrigger: triggerConfig,
     }
   );
 }
@@ -145,191 +178,175 @@ export function initScrollAnimations() {
   if (prefersReducedMotion()) return;
   const noParallax = isTouch();
 
-  // ── HERO SECTION ──────────────────────────────────────────────────
-  // The hero enters with motion/react animations; add parallax depth layers
+  // ── 1. HERO SECTION ENTRY ANIMATIONS ───────────────────────────────
+  const heroHeading = document.querySelector('#hero-name-heading');
+  if (heroHeading) {
+    revealLinesMask(heroHeading, {
+      trigger: false, // Run immediately on load
+      delay: 0.1,
+      duration: 1.35,
+      ease: 'power4.out',
+      byWords: true,
+      stagger: 0.1,
+    });
+  }
+
+  // Hero left intro copy & contact button
+  const heroLeftItems = document.querySelectorAll('#bento-col-left > *');
+  if (heroLeftItems.length) {
+    staggerFadeUp(heroLeftItems, {
+      trigger: false,
+      baseDelay: 0.4,
+      stagger: 0.12,
+    });
+  }
+
+  // Hero middle portrait photo
+  const heroPhoto = document.querySelector('#bento-col-center');
+  if (heroPhoto) {
+    fadeUp(heroPhoto, {
+      trigger: false,
+      delay: 0.3,
+      duration: 1.1,
+      y: dist(45),
+      ease: 'power3.out',
+    });
+  }
+
+  // Hero right date counter
+  const heroRight = document.querySelector('#bento-col-right');
+  if (heroRight) {
+    fadeUp(heroRight, {
+      trigger: false,
+      delay: 0.45,
+      duration: 1.0,
+      y: dist(35),
+      ease: 'power3.out',
+    });
+  }
+
+  // Hero arrow parallax
   if (!noParallax) {
-    // Arrow icon parallax
     gsap.to('#bento-col-left .lucide-arrow-down-right, #bento-col-left svg', {
-      y: -dist(15),
+      y: -dist(20),
       ease: 'none',
       scrollTrigger: { trigger: '#hero-section', start: 'top top', end: 'bottom top', scrub: 1.0 },
     });
   }
 
-  // ── SERVICES SECTION ──────────────────────────────────────────────
+  // ── 2. SERVICES SECTION ANIMATIONS ─────────────────────────────────
   const servicesSection = document.querySelector('#services-section-dark');
   if (servicesSection) {
-    // Main heading word reveal
-    const servicesHeading = servicesSection.querySelector('h2, [id*="services-main-title"]');
-    if (servicesHeading) revealWords(servicesHeading, { trigger: servicesSection, start: 'top 78%' });
+    // Heading mask reveal
+    const servicesHeading = servicesSection.querySelector('h2, #services-main-title');
+    if (servicesHeading) {
+      revealLinesMask(servicesHeading, {
+        trigger: servicesSection,
+        start: 'top 80%',
+        delay: 0.05,
+        duration: 1.25,
+        ease: 'power4.out',
+      });
+    }
 
-    // Services subtitle/intro text
-    const servicesIntro = servicesSection.querySelectorAll('.services-intro p, [class*="text-neutral"] > p');
-    staggerFadeUp(servicesIntro, { trigger: servicesSection, start: 'top 75%', baseDelay: 0.2 });
+    // Intro paragraph
+    const servicesIntroP = servicesSection.querySelectorAll('#services-section-header p, #services-section-header span');
+    if (servicesIntroP.length) {
+      staggerFadeUp(servicesIntroP, {
+        trigger: servicesSection,
+        start: 'top 78%',
+        baseDelay: 0.2,
+        stagger: 0.1,
+      });
+    }
 
-    // Each service row fades in with stagger from left
-    const serviceRows = servicesSection.querySelectorAll('.service-row, [class*="border-b"][class*="py-"]');
+    // Service blocks stagger
+    const serviceRows = servicesSection.querySelectorAll('[id^="service-block-"]');
     serviceRows.forEach((row, i) => {
       gsap.fromTo(
         row,
-        { opacity: 0, x: -dist(30), force3D: true },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.7,
-          delay: i * 0.1,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: row,
-            start: 'top 90%',
-            toggleActions: 'play none none none',
-          },
-        }
-      );
-    });
-
-    // Tech rows within each service
-    const techRows = servicesSection.querySelectorAll('.tech-row, [class*="font-mono"][class*="text-xs"]');
-    staggerFadeUp(techRows, { trigger: servicesSection, start: 'top 70%', baseDelay: 0.35, stagger: 0.05 });
-  }
-
-  // ── WORKS SECTION ─────────────────────────────────────────────────
-  // Works intro section
-  const worksIntro = document.querySelector('#works-intro-sticky');
-  if (worksIntro) {
-    const worksTitle = worksIntro.querySelector('h2');
-    if (worksTitle) revealWords(worksTitle, { trigger: worksIntro, start: 'top 78%' });
-    const worksP = worksIntro.querySelector('p');
-    if (worksP) fadeUp(worksP, { trigger: worksIntro, start: 'top 75%', delay: 0.25 });
-  }
-
-  // Individual project cards
-  const projectCards = document.querySelectorAll('.project-card-reveal');
-  projectCards.forEach((card) => {
-    const parentSection = card.closest('[id^="project-"]');
-
-    // Project number
-    const numEl = card.querySelector('span[class*="text-5xl"], span[class*="text-7xl"], span[class*="text-8xl"]');
-    if (numEl) {
-      gsap.fromTo(numEl,
-        { opacity: 0, x: -dist(25), force3D: true },
-        { opacity: 1, x: 0, duration: 0.9, ease: 'power3.out',
-          scrollTrigger: { trigger: parentSection ?? card, start: 'top 82%', toggleActions: 'play none none none' }
-        }
-      );
-    }
-
-    // Project title — word reveal
-    const titleEl = card.querySelector('h3');
-    if (titleEl) revealWords(titleEl, { trigger: parentSection ?? card, start: 'top 80%', delay: 0.1 });
-
-    // Meta line (category/year)
-    const metaEl = card.querySelector('[class*="font-mono"][class*="text-[10px"]');
-    if (metaEl) fadeUp(metaEl, { trigger: parentSection ?? card, start: 'top 80%', y: dist(15), delay: 0.2 });
-
-    // Description
-    const descEl = card.querySelector('p');
-    if (descEl) fadeUp(descEl, { trigger: parentSection ?? card, start: 'top 78%', delay: 0.3, duration: 0.8 });
-
-    // Tech tags — stagger
-    const tags = card.querySelectorAll('span[class*="rounded-full"]');
-    staggerFadeUp(tags, { trigger: parentSection ?? card, start: 'top 76%', baseDelay: 0.4, stagger: 0.06 });
-
-    // CTA links
-    const links = card.querySelectorAll('a');
-    staggerFadeUp(links, { trigger: parentSection ?? card, start: 'top 74%', baseDelay: 0.55, stagger: 0.1 });
-
-    // Image parallax
-    const img = card.querySelector('img');
-    if (img && !noParallax) {
-      gsap.fromTo(
-        img,
-        { scale: 1.1, force3D: true },
-        {
-          scale: 1,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: parentSection ?? card,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: 2.0,
-          },
-        }
-      );
-    }
-
-    // Divider line scaleX reveal
-    const divider = (parentSection ?? card).querySelector('.project-divider');
-    if (divider) {
-      gsap.to(divider, {
-        scaleX: 1,
-        duration: 1.2,
-        ease: 'power4.out',
-        scrollTrigger: {
-          trigger: parentSection ?? card,
-          start: 'top 90%',
-          toggleActions: 'play none none none',
-        },
-      });
-    }
-  });
-
-  // ── SKILLS SECTION ─────────────────────────────────────────────────
-  const skillsSection = document.querySelector('#skills-section-dark');
-  if (skillsSection) {
-    // Heading lines
-    const headingLines = skillsSection.querySelectorAll('.skills-heading-line');
-    headingLines.forEach((line, i) => {
-      gsap.fromTo(
-        line,
-        { opacity: 0, y: dist(70), force3D: true },
+        { opacity: 0, y: dist(35), force3D: true },
         {
           opacity: 1,
           y: 0,
-          duration: 1.0,
-          delay: i * 0.12,
+          duration: 0.85,
+          delay: i * 0.08,
           ease: 'power3.out',
           scrollTrigger: {
-            trigger: skillsSection,
-            start: 'top 80%',
-            toggleActions: 'play none none none',
-          },
-        }
-      );
-    });
-
-    // Skills title reveal
-    const skillsTitle = skillsSection.querySelector('.skills-title-reveal');
-    if (skillsTitle) fadeUp(skillsTitle, { trigger: skillsSection, start: 'top 80%', y: dist(40), delay: 0.08 });
-
-    // Skill list items with stagger
-    const skillItems = skillsSection.querySelectorAll('.skill-list-item');
-    skillItems.forEach((item, i) => {
-      const col = item.closest('.skill-list-col');
-      gsap.fromTo(
-        item,
-        { opacity: 0, x: dist(18), force3D: true },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.55,
-          delay: i * 0.04,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: col ?? skillsSection,
+            trigger: row,
             start: 'top 88%',
             toggleActions: 'play none none none',
           },
         }
       );
     });
-
-    // Skill category labels
-    const categories = skillsSection.querySelectorAll('[class*="tracking-widest"]');
-    staggerFadeUp(categories, { trigger: skillsSection, start: 'top 82%', baseDelay: 0.05, stagger: 0.07 });
   }
 
-  // ── ABOUT SECTION ──────────────────────────────────────────────────
+  // ── 3. WORKS SECTION ANIMATIONS ────────────────────────────────────
+  const worksSection = document.querySelector('#works-section');
+  if (worksSection) {
+    const worksTitle = worksSection.querySelector('h2, #works-main-title');
+    if (worksTitle) {
+      revealLinesMask(worksTitle, {
+        trigger: worksSection,
+        start: 'top 85%',
+        delay: 0.05,
+        duration: 1.25,
+        ease: 'power4.out',
+      });
+    }
+
+    const worksHeaderCopy = worksSection.querySelectorAll('#works-section p, #works-section span[class*="font-mono"]');
+    if (worksHeaderCopy.length) {
+      staggerFadeUp(worksHeaderCopy, {
+        trigger: worksSection,
+        start: 'top 82%',
+        baseDelay: 0.25,
+        stagger: 0.1,
+      });
+    }
+  }
+
+  // ── 4. SKILLS SECTION ANIMATIONS ───────────────────────────────────
+  const skillsSection = document.querySelector('#skills-section-dark');
+  if (skillsSection) {
+    // Heading lines mask reveal
+    const headingLines = skillsSection.querySelectorAll('.skills-heading-line');
+    headingLines.forEach((line, i) => {
+      revealLinesMask(line, {
+        trigger: skillsSection,
+        start: 'top 80%',
+        delay: i * 0.12,
+        duration: 1.25,
+        ease: 'power4.out',
+      });
+    });
+
+    // Skills title reveal
+    const skillsTitle = skillsSection.querySelector('.skills-title-reveal');
+    if (skillsTitle) {
+      revealLinesMask(skillsTitle, {
+        trigger: skillsSection,
+        start: 'top 80%',
+        delay: 0.1,
+        duration: 1.2,
+        ease: 'power4.out',
+      });
+    }
+
+    // Skill category lists with stagger
+    const skillCols = skillsSection.querySelectorAll('.skill-list-col');
+    skillCols.forEach((col, i) => {
+      staggerFadeUp(col.querySelectorAll('.skill-list-item'), {
+        trigger: col,
+        start: 'top 88%',
+        baseDelay: i * 0.1,
+        stagger: 0.05,
+      });
+    });
+  }
+
+  // ── 5. ABOUT SECTION ANIMATIONS ────────────────────────────────────
   const aboutSection = document.querySelector('#about-section-dark');
   if (aboutSection) {
     // Portrait card reveal
@@ -337,12 +354,12 @@ export function initScrollAnimations() {
     if (cardEl) {
       gsap.fromTo(
         cardEl,
-        { opacity: 0, y: dist(45), scale: 0.97, force3D: true },
+        { opacity: 0, y: dist(45), scale: 0.96, force3D: true },
         {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 1.1,
+          duration: 1.15,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: aboutSection,
@@ -353,72 +370,58 @@ export function initScrollAnimations() {
       );
     }
 
-    // The About heading already has its own motion reveal in React. Keeping it
-    // as plain text preserves natural word spacing and line wrapping.
+    // About main heading mask reveal
+    const aboutHeading = aboutSection.querySelector('h2');
+    if (aboutHeading) {
+      revealLinesMask(aboutHeading, {
+        trigger: aboutSection,
+        start: 'top 80%',
+        delay: 0.1,
+        duration: 1.25,
+        ease: 'power4.out',
+        byWords: true,
+      });
+    }
 
     // Paragraphs stagger
     const aboutPs = aboutSection.querySelectorAll('p');
-    aboutPs.forEach((p, i) => {
-      gsap.fromTo(
-        p,
-        { opacity: 0, y: dist(25), force3D: true },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.75,
-          delay: 0.15 + i * 0.12,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: p,
-            start: 'top 92%',
-            toggleActions: 'play none none none',
-          },
-        }
-      );
-    });
-
-    // Stat items
-    const stats = aboutSection.querySelectorAll('[class*="stat"], [class*="metric"]');
-    staggerFadeUp(stats, { trigger: aboutSection, start: 'top 75%', baseDelay: 0.3, stagger: 0.1 });
+    if (aboutPs.length) {
+      staggerFadeUp(aboutPs, {
+        trigger: aboutSection,
+        start: 'top 78%',
+        baseDelay: 0.3,
+        stagger: 0.12,
+      });
+    }
   }
 
-  // ── CONTACT SECTION ────────────────────────────────────────────────
+  // ── 6. CONTACT SECTION ANIMATIONS ──────────────────────────────────
   const contactSection = document.querySelector('#contact-section-dark');
   if (contactSection) {
-    // Heading lines with letter-spacing animation
+    // Heading lines mask reveal
     const contactHeadingLines = contactSection.querySelectorAll('.contact-heading-line');
     contactHeadingLines.forEach((line, i) => {
-      gsap.fromTo(
-        line,
-        { opacity: 0, y: dist(90), letterSpacing: '0.2em', force3D: true },
-        {
-          opacity: 1,
-          y: 0,
-          letterSpacing: '-0.04em',
-          duration: 1.2,
-          delay: i * 0.14,
-          ease: 'power4.out',
-          scrollTrigger: {
-            trigger: contactSection,
-            start: 'top 80%',
-            toggleActions: 'play none none none',
-          },
-        }
-      );
+      revealLinesMask(line, {
+        trigger: contactSection,
+        start: 'top 80%',
+        delay: i * 0.14,
+        duration: 1.3,
+        ease: 'power4.out',
+      });
     });
 
-    // CTA items (buttons, links)
-    const ctaItems = contactSection.querySelectorAll('.contact-cta-reveal');
-    ctaItems.forEach((el, i) => {
+    // Form card reveal
+    const ctaCard = contactSection.querySelector('.contact-cta-reveal');
+    if (ctaCard) {
       gsap.fromTo(
-        el,
-        { opacity: 0, y: dist(30), scale: 0.94, force3D: true },
+        ctaCard,
+        { opacity: 0, y: dist(40), scale: 0.95, force3D: true },
         {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.8,
-          delay: 0.18 + i * 0.12,
+          duration: 0.95,
+          delay: 0.25,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: contactSection,
@@ -427,18 +430,25 @@ export function initScrollAnimations() {
           },
         }
       );
-    });
+    }
 
-    // Form fields
-    const formFields = contactSection.querySelectorAll('input, textarea');
-    staggerFadeUp(formFields, { trigger: contactSection, start: 'top 72%', baseDelay: 0.4, stagger: 0.1 });
+    // Form input fields stagger
+    const formFields = contactSection.querySelectorAll('input, textarea, button[type="submit"]');
+    if (formFields.length) {
+      staggerFadeUp(formFields, {
+        trigger: ctaCard ?? contactSection,
+        start: 'top 74%',
+        baseDelay: 0.35,
+        stagger: 0.08,
+      });
+    }
 
-    // Footer bar
+    // Footer bar fade-up
     const footerBar = contactSection.querySelector('.contact-footer-bar');
     if (footerBar) {
       gsap.fromTo(
         footerBar,
-        { opacity: 0, y: dist(20) },
+        { opacity: 0, y: dist(20), force3D: true },
         {
           opacity: 1,
           y: 0,

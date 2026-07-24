@@ -100,17 +100,17 @@ export default function WorksSection() {
       <div
         id="works-intro-sticky"
         style={{ zIndex: 30 }}
-        className="w-full min-h-screen md:h-screen relative bg-transparent text-[#EAE7DF] overflow-hidden border-b border-neutral-900/80 flex flex-col justify-center"
+        className="w-full relative bg-transparent text-[#EAE7DF] border-b border-neutral-900/80 flex flex-col"
       >
         <div
           id="works-intro-sticky-inner"
-          className="w-full h-full px-6 py-16 md:py-0 flex flex-col justify-center"
+          className="w-full px-6 pt-6 md:pt-10 pb-8 md:pb-12 flex flex-col justify-start"
           style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
         >
           <div className="absolute inset-x-0 top-0 h-[1px] bg-neutral-900 pointer-events-none" />
 
-          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            <div className="col-span-1 md:col-span-12 mb-8 md:mb-12">
+          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 items-start">
+            <div className="col-span-1 md:col-span-12 mb-4 md:mb-6">
               <h2
                 id="works-main-title"
                 className="font-display font-black tracking-tighter uppercase leading-[0.8] text-[#EAE7DF] select-none"
@@ -120,7 +120,7 @@ export default function WorksSection() {
               </h2>
             </div>
 
-            <div className="col-span-1 md:col-span-4 flex flex-col md:items-start justify-start space-y-4 text-left">
+            <div className="col-span-1 md:col-span-4 flex flex-col md:items-start justify-start space-y-2 text-left">
               <span className="font-mono text-[11px] tracking-[0.25em] text-[#8c8a82] uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#8c8a82]" />
                 (PROJECTS)
@@ -128,7 +128,7 @@ export default function WorksSection() {
             </div>
 
             <div className="col-span-1 md:col-span-8 text-left">
-              <p className="text-neutral-400 text-lg md:text-2xl leading-relaxed max-w-3xl font-light">
+              <p className="text-neutral-400 text-base md:text-xl lg:text-2xl leading-relaxed max-w-3xl font-light">
                 Thoughtfully crafted digital experiences that blend utility and aesthetics into something functional, memorable, and refined.
               </p>
             </div>
@@ -146,11 +146,11 @@ export default function WorksSection() {
             key={project.id}
             id={`project-${project.id}`}
             style={{ zIndex: zIndexValue }}
-            className="w-full min-h-screen md:h-screen relative bg-transparent overflow-hidden border-b border-neutral-900/80 flex items-center justify-center"
+            className="w-full relative bg-transparent overflow-hidden border-b border-neutral-900/80 flex items-center justify-center"
           >
             <div
               id={`project-${project.id}-inner`}
-              className="w-full h-full px-6 py-12 md:py-16 flex items-center justify-center relative"
+              className="w-full h-full px-6 py-8 md:py-12 lg:py-16 flex items-center justify-center relative"
               style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
             >
               {/* Thin top editorial divider line */}

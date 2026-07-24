@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowUpRight, Send, CheckCircle2, Star, Layers, Code, ShoppingBag, Radio, MessageSquare, History, Cpu } from 'lucide-react';
+import { ArrowUpRight, Send, CheckCircle2, AlertCircle, Star, Layers, Code, ShoppingBag, Radio, MessageSquare, Cpu } from 'lucide-react';
 import { Project, Service, ContactMessage } from '../types';
+import { useContactForm } from '../hooks/useContactForm';
 
 // Hardcoded premium projects
 const PROJECTS: Project[] = [
@@ -312,54 +313,19 @@ export function AboutContent() {
    4. CONTACT CONTENT
 -------------------------------------------- */
 export function ContactContent() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [messagesHistory, setMessagesHistory] = useState<ContactMessage[]>(() => {
-    // Read from localStorage to persist submissions!
-    const stored = localStorage.getItem('ossama_portfolio_messages');
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email || !message) return;
-
-    setIsSubmitting(true);
-
-    // Simulate network latency for satisfying feel
-    setTimeout(() => {
-      const newMessage: ContactMessage = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        email,
-        message,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      };
-
-      const updatedHistory = [newMessage, ...messagesHistory];
-      setMessagesHistory(updatedHistory);
-      localStorage.setItem('ossama_portfolio_messages', JSON.stringify(updatedHistory));
-
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      setName('');
-      setEmail('');
-      setMessage('');
-
-      // Clear success notification after 5 seconds
-      setTimeout(() => {
-        setIsSuccess(false);
-      }, 5000);
-    }, 1200);
-  };
-
-  const handleClearHistory = () => {
-    setMessagesHistory([]);
-    localStorage.removeItem('ossama_portfolio_messages');
-  };
+  const {
+    name,
+    email,
+    message,
+    isSubmitting,
+    isSuccess,
+    isError,
+    errorMessage,
+    setName,
+    setEmail,
+    setMessage,
+    handleSubmit,
+  } = useContactForm();
 
   return (
     <div id="contact-content-wrapper" className="space-y-8">
@@ -384,8 +350,23 @@ export function ContactContent() {
           >
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <div>
-              <p className="font-semibold">Message Dispatched Successfully!</p>
-              <p className="opacity-90 mt-0.5">Thank you, your entry has been persisted locally in your browser console outbox.</p>
+              <p className="font-semibold">Message Sent Successfully!</p>
+              <p className="opacity-90 mt-0.5">Thanks for reaching out — I'll get back to you shortly. A confirmation has been sent to your email.</p>
+            </div>
+          </motion.div>
+        )}
+        {isError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            id="contact-error-banner"
+            className="p-4 rounded-lg bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">Something went wrong.</p>
+              <p className="opacity-90 mt-0.5">Please try again or email me directly at ossamamajid143@gmail.com</p>
             </div>
           </motion.div>
         )}
@@ -464,37 +445,6 @@ export function ContactContent() {
         </button>
       </form>
 
-      {/* Simulated Local Outbox persistence list */}
-      {messagesHistory.length > 0 && (
-        <div id="contact-outbox-wrapper" className="pt-6 border-t border-[#2e2d2a]/60 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#8c8a82] flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5" /> Local Message Outbox ({messagesHistory.length})
-            </span>
-            <button
-              onClick={handleClearHistory}
-              id="clear-outbox-btn"
-              className="font-mono text-[9px] uppercase tracking-wider text-red-400/80 hover:text-red-400 transition-colors cursor-pointer"
-            >
-              Clear Log
-            </button>
-          </div>
-
-          <div id="outbox-list" className="max-h-[220px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-            {messagesHistory.map((item) => (
-              <div key={item.id} id={`outbox-item-${item.id}`} className="p-3.5 rounded-lg bg-[#1c1b1a] border border-[#2e2d2a] space-y-1">
-                <div className="flex justify-between items-center text-[10px] font-mono text-neutral-400">
-                  <span className="font-semibold text-neutral-300">{item.name} ({item.email})</span>
-                  <span>{item.timestamp}</span>
-                </div>
-                <p className="text-xs text-neutral-300 leading-relaxed italic">
-                  "{item.message}"
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

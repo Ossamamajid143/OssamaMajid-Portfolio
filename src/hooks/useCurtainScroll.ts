@@ -49,13 +49,18 @@ export default function useCurtainScroll(
       }, 100);
     }
 
-    // Refresh ScrollTrigger after all animations registered
-    setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 300);
+    // Refresh ScrollTrigger after all animations registered and assets loaded
+    const refreshTrigger = () => ScrollTrigger.refresh();
+    setTimeout(refreshTrigger, 100);
+    setTimeout(refreshTrigger, 300);
+    setTimeout(refreshTrigger, 800);
+    window.addEventListener('load', refreshTrigger);
+    window.addEventListener('resize', refreshTrigger);
 
     // Cleanup on unmount
     return () => {
+      window.removeEventListener('load', refreshTrigger);
+      window.removeEventListener('resize', refreshTrigger);
       gsap.ticker.remove(updateLenis);
       lenis.destroy();
       ScrollTrigger.getAll().forEach(t => t.kill());

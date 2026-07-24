@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
+import { useContactForm } from '../hooks/useContactForm';
 
 export default function ContactSection() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const {
+    name,
+    email,
+    message,
+    isSubmitting,
+    isSuccess,
+    isError,
+    errorMessage,
+    setName,
+    setEmail,
+    setMessage,
+    handleSubmit,
+  } = useContactForm();
 
   // Live ticking clock state for the footer
   const [currentTime, setCurrentTime] = useState('');
@@ -45,50 +54,19 @@ export default function ContactSection() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email) return;
-
-    setIsSubmitting(true);
-    // Simulate real high-end portfolio action with short network latency
-    setTimeout(() => {
-      // Save to localStorage so submissions are persisted
-      const existing = localStorage.getItem('ossama_portfolio_messages');
-      const messages = existing ? JSON.parse(existing) : [];
-      messages.unshift({
-        id: Math.random().toString(36).substring(2, 9),
-        name,
-        email,
-        message,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('ossama_portfolio_messages', JSON.stringify(messages));
-
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      setName('');
-      setEmail('');
-      setMessage('');
-
-      setTimeout(() => {
-        setIsSuccess(false);
-      }, 5000);
-    }, 1500);
-  };
-
   return (
     <section
       id="contact-section-dark"
       style={{ zIndex: 60 }}
-      className="w-full relative z-[60] bg-[#050505] flex flex-col justify-between min-h-screen"
+      className="w-full relative z-[60] bg-[#050505] flex flex-col"
     >
       <div
         id="contact-section-dark-inner"
-        className="w-full h-full flex flex-col justify-between min-h-screen"
+        className="w-full flex flex-col justify-between min-h-screen"
         style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
       >
         {/* 1. CONTACT FORM AREA (Black Background) */}
-      <div className="w-full px-6 py-20 md:py-36 lg:py-40 flex flex-col items-center justify-center relative">
+      <div className="w-full px-6 py-12 md:py-20 lg:py-24 flex flex-col items-center justify-center relative">
         {/* Top boundary separator matching previous sections */}
         <div className="absolute inset-x-0 top-0 h-[1px] bg-neutral-800/60 pointer-events-none" />
 
@@ -140,6 +118,7 @@ export default function ContactSection() {
               <div className="flex flex-col">
                 <textarea
                   rows={4}
+                  required
                   placeholder="Tell me about your business or project"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -159,7 +138,7 @@ export default function ContactSection() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    CONNECTING...
+                    TRANSMITTING...
                   </span>
                 ) : (
                   'Get a quote'
@@ -167,7 +146,7 @@ export default function ContactSection() {
               </button>
             </form>
 
-            {/* Success overlay banner */}
+            {/* Success / Error Overlay Banner */}
             <AnimatePresence>
               {isSuccess && (
                 <motion.div
@@ -181,7 +160,24 @@ export default function ContactSection() {
                   </div>
                   <h4 className="font-display font-bold text-xl text-[#eae8e4] mb-2">Message Sent Successfully</h4>
                   <p className="text-neutral-400 text-xs sm:text-sm font-light max-w-xs">
-                    Thank you for reaching out! I will get back to you within 24 hours to discuss your project.
+                    Thank you for reaching out! A confirmation has been sent to your email, and I will get back to you shortly.
+                  </p>
+                </motion.div>
+              )}
+
+              {isError && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute inset-0 bg-[#121211] flex flex-col items-center justify-center p-6 text-center z-10"
+                >
+                  <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mb-4 border border-red-500/30">
+                    <AlertCircle className="w-8 h-8 stroke-[2.5px]" />
+                  </div>
+                  <h4 className="font-display font-bold text-xl text-[#eae8e4] mb-2">Transmission Failed</h4>
+                  <p className="text-neutral-400 text-xs sm:text-sm font-light max-w-xs">
+                    {errorMessage || 'Something went wrong. Please try again or email directly at ossamamajid143@gmail.com'}
                   </p>
                 </motion.div>
               )}
