@@ -2,7 +2,7 @@
 
 My personal portfolio website. Built from scratch with React, TypeScript, and GSAP. Designed to feel premium, load fast, and leave an impression.
 
-Live → **[ossamamajid.vercel.app](https://ossamamajid.vercel.app)**
+Live → **[ossamamajid.vercel.app](https://ossama-majid-portfolio.vercel.app)**
 
 ---
 
