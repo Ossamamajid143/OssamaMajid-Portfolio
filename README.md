@@ -1,99 +1,101 @@
-# Ossama Majid — Developer & Designer Portfolio
+# Ossama Majid — Portfolio
 
-A modern, high-performance developer portfolio built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, and **GSAP**. Designed with a sleek dark aesthetic, fluid smooth scrolling, and interactive motion components to showcase selected work, services, and technical expertise.
+My personal portfolio website. Built from scratch with React, TypeScript, and GSAP. Designed to feel premium, load fast, and leave an impression.
 
----
-
-## ✨ Features
-
-- **🎨 Modern Dark Aesthetic**: High-contrast, minimalist UI with glassmorphism effects and custom typography.
-- **⚡ High Performance**: Fast load times and instant HMR powered by Vite and React 19.
-- **🌊 Smooth Motion & Physics**: Fluid scrolling powered by **Lenis** and rich micro-interactions using **GSAP** and **Framer Motion**.
-- **💼 Interactive Work Showcase**: Filterable portfolio project gallery with detailed modal views.
-- **🛠️ Services & Skills Overview**: Detailed breakdown of design capabilities, frontend/backend stack, and tools.
-- **📅 Dynamic Availability Indicator**: Live indicator displaying real-time availability status for freelance & full-time roles.
-- **📱 Fully Responsive**: Tailored layouts for desktop, tablet, and mobile breakpoints.
+Live → **[ossamamajid.vercel.app](https://ossamamajid.vercel.app)**
 
 ---
 
-## 🛠️ Tech Stack
+## What's Inside
 
-- **Framework**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Animations**: [GSAP](https://gsap.com/) + [Framer Motion / Motion](https://motion.dev/)
-- **Smooth Scroll**: [Lenis](https://lenis.darkroom.engineering/)
-- **Icons**: [Lucide React](https://lucide.dev/)
+A fully custom dark-mode portfolio with smooth scroll, editorial typography animations, and a working contact form. No templates, no themes — every component written by hand.
 
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18.0 or higher recommended)
-- `npm` or `yarn` / `pnpm`
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/<your-username>/OssamaMajid-Portfolio.git
-   cd OssamaMajid-Portfolio
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the local development server:**
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to `http://localhost:3000`.
+**Sections:**
+- Hero with animated availability status
+- Selected Works with scroll-driven project transitions
+- Services & Skills breakdown
+- About with full-color portrait
+- Contact form (powered by EmailJS — actually sends emails)
 
 ---
 
-## 📦 Build for Production
+## Tech Stack
 
-To create an optimized production build:
+| Layer | Tools |
+|---|---|
+| Framework | React 19 + TypeScript |
+| Build | Vite |
+| Styling | Tailwind CSS v4 |
+| Animations | GSAP + Framer Motion (Motion) |
+| Smooth Scroll | Lenis |
+| Contact | EmailJS |
+| Icons | Lucide React |
+
+---
+
+## Running Locally
 
 ```bash
-npm run build
+git clone https://github.com/Ossamamajid143/OssamaMajid-Portfolio.git
+cd OssamaMajid-Portfolio
+npm install
 ```
 
-To preview the built application locally:
+Create a `.env` file in the root (see `.env.example` for the variable names):
+
+```env
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+VITE_EMAILJS_CONTACT_TEMPLATE_ID=your_contact_template_id
+VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID=your_autoreply_template_id
+```
+
+Then start the dev server:
 
 ```bash
-npm run preview
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+---
+
+## Contact Form Setup
+
+The contact form uses [EmailJS](https://www.emailjs.com/) — no backend needed. When someone submits the form:
+1. You get the inquiry email
+2. They get an auto-reply confirmation
+
+Set up a free EmailJS account, create two email templates, and drop the keys into your `.env` file.
+
+---
+
+## Project Structure
+
+```
+src/
+├── assets/images/      # Project screenshots and profile photo
+├── components/         # All page sections as React components
+├── hooks/
+│   ├── useCurtainScroll.ts   # Lenis smooth scroll + GSAP init
+│   └── useContactForm.ts     # Shared EmailJS form hook (used by both forms)
+├── utils/
+│   ├── scrollAnimations.ts   # GSAP scroll-triggered animations
+│   └── curtainAnimation.ts   # Curtain/section reveal logic
+├── types.ts            # Shared TypeScript interfaces
+├── App.tsx             # Root layout, navigation state, slide-out panel
+├── main.tsx            # Entry point
+└── index.css           # Global styles and Tailwind config
 ```
 
 ---
 
-## 📁 Project Structure
+## Deployment
 
-```text
-├── src/
-│   ├── assets/         # Static visual assets & images
-│   ├── components/     # UI Components (Works, About, Contact, Skills, etc.)
-│   ├── App.tsx         # Main App layout & navigation state
-│   ├── main.tsx        # Application entry point
-│   └── index.css       # Global styles & Tailwind setup
-├── public/             # Static public files
-├── index.html          # HTML entry point
-├── package.json        # Dependencies and scripts
-├── tsconfig.json       # TypeScript configuration
-└── vite.config.ts      # Vite configuration
-```
+Deployed on [Vercel](https://vercel.com). Any push to `main` triggers an automatic redeploy.
+
+Add your EmailJS environment variables in Vercel under **Project → Settings → Environment Variables**.
 
 ---
 
-## 📝 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-Created with ❤️ by **Ossama Majid**
+Built by **Ossama Majid** — Frontend Developer & Designer
